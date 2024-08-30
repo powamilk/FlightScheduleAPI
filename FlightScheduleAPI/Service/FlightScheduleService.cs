@@ -1,0 +1,308 @@
+﻿using FlightScheduleAPI.ViewModel;
+using FlightScheduleAPI.Entities;
+
+namespace FlightScheduleAPI.Service
+{
+    public class FlightScheduleService : IFlightScheduleService
+    {
+        private static List<FlightSchedule> _flightSchedules = new();
+        private static List<KhachHang> _khachHangs = new();
+        private readonly ILogger<FlightScheduleService> _logger;
+
+        public FlightScheduleService(ILogger<FlightScheduleService> logger)
+        {
+            _logger = logger;
+        }
+
+        public List<FlightScheduleVM> LayDanhSachChuyenBay(out string errorMessage)
+        {
+            if (_flightSchedules.Any())
+            {
+                errorMessage = null;
+                return _flightSchedules.Select(f => new FlightScheduleVM
+                {
+                    Id = f.Id,
+                    FlightNumber = f.FlightNumber,
+                    DepartureAirport = f.DepartureAirport,
+                    ArrivalAirport = f.ArrivalAirport,
+                    DepartureTime = f.DepartureTime,
+                    ArrivalTime = f.ArrivalTime,
+                    Status = f.Status,
+                    KhachHangs = f.KhachHangs.Select(k => new KhachHangVM
+                    {
+                        Id = k.Id,
+                        Name = k.Name,
+                        Email = k.Email,
+                        Phone = k.Phone,
+                        TicketNumber = k.TicketNumber
+                    }).ToList()
+                }).ToList();
+            }
+
+            errorMessage = "Không có chuyến bay nào trong danh sách.";
+            return null;
+        }
+
+        public FlightScheduleVM LayChuyenBayTheoId(int id, out string errorMessage)
+        {
+            var flightSchedule = _flightSchedules.FirstOrDefault(f => f.Id == id);
+            if (flightSchedule != null)
+            {
+                errorMessage = null;
+                return new FlightScheduleVM
+                {
+                    Id = flightSchedule.Id,
+                    FlightNumber = flightSchedule.FlightNumber,
+                    DepartureAirport = flightSchedule.DepartureAirport,
+                    ArrivalAirport = flightSchedule.ArrivalAirport,
+                    DepartureTime = flightSchedule.DepartureTime,
+                    ArrivalTime = flightSchedule.ArrivalTime,
+                    Status = flightSchedule.Status,
+                    KhachHangs = flightSchedule.KhachHangs.Select(k => new KhachHangVM
+                    {
+                        Id = k.Id,
+                        Name = k.Name,
+                        Email = k.Email,
+                        Phone = k.Phone,
+                        TicketNumber = k.TicketNumber
+                    }).ToList()
+                };
+            }
+
+            errorMessage = "Không tìm thấy chuyến bay với ID này.";
+            return null;
+        }
+
+        public bool TaoChuyenBay(CreateFlightScheduleVM request, out string errorMessage)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request.FlightNumber) || request.FlightNumber.Length > 10 ||
+                    string.IsNullOrWhiteSpace(request.DepartureAirport) || request.DepartureAirport.Length > 100 ||
+                    string.IsNullOrWhiteSpace(request.ArrivalAirport) || request.ArrivalAirport.Length > 100 ||
+                    request.DepartureTime == default || request.ArrivalTime == default ||
+                    request.ArrivalTime <= request.DepartureTime ||
+                    !new[] { "đang bay", "đã hạ cánh", "hoãn" }.Contains(request.Status))
+                {
+                    errorMessage = "Dữ liệu đầu vào không hợp lệ. Vui lòng kiểm tra lại các trường thông tin.";
+                    return false;
+                }
+
+                var flightSchedule = new FlightSchedule
+                {
+                    Id = _flightSchedules.Any() ? _flightSchedules.Max(f => f.Id) + 1 : 1,
+                    FlightNumber = request.FlightNumber,
+                    DepartureAirport = request.DepartureAirport,
+                    ArrivalAirport = request.ArrivalAirport,
+                    DepartureTime = request.DepartureTime,
+                    ArrivalTime = request.ArrivalTime,
+                    Status = request.Status
+                };
+
+                _flightSchedules.Add(flightSchedule);
+                errorMessage = null;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Đã xảy ra lỗi khi tạo chuyến bay: {ex.Message}";
+                return false;
+            }
+        }
+
+        public bool CapNhatChuyenBay(int id, UpdateFlightScheduleVM request, out string errorMessage)
+        {
+            try
+            {
+                var flightSchedule = _flightSchedules.FirstOrDefault(f => f.Id == id);
+                if (flightSchedule == null)
+                {
+                    errorMessage = "Không tìm thấy chuyến bay với ID này.";
+                    return false;
+                }
+
+                if (string.IsNullOrWhiteSpace(request.FlightNumber) || request.FlightNumber.Length > 10 ||
+                    string.IsNullOrWhiteSpace(request.DepartureAirport) || request.DepartureAirport.Length > 100 ||
+                    string.IsNullOrWhiteSpace(request.ArrivalAirport) || request.ArrivalAirport.Length > 100 ||
+                    request.DepartureTime == default || request.ArrivalTime == default ||
+                    request.ArrivalTime <= request.DepartureTime ||
+                    !new[] { "đang bay", "đã hạ cánh", "hoãn" }.Contains(request.Status))
+                {
+                    errorMessage = "Dữ liệu đầu vào không hợp lệ. Vui lòng kiểm tra lại các trường thông tin.";
+                    return false;
+                }
+
+                flightSchedule.FlightNumber = request.FlightNumber;
+                flightSchedule.DepartureAirport = request.DepartureAirport;
+                flightSchedule.ArrivalAirport = request.ArrivalAirport;
+                flightSchedule.DepartureTime = request.DepartureTime;
+                flightSchedule.ArrivalTime = request.ArrivalTime;
+                flightSchedule.Status = request.Status;
+
+                errorMessage = null;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Đã xảy ra lỗi khi cập nhật chuyến bay: {ex.Message}";
+                return false;
+            }
+        }
+
+        public bool XoaChuyenBay(int id, out string errorMessage)
+        {
+            try
+            {
+                var flightSchedule = _flightSchedules.FirstOrDefault(f => f.Id == id);
+                if (flightSchedule == null)
+                {
+                    errorMessage = "Không tìm thấy chuyến bay với ID này.";
+                    return false;
+                }
+
+                _flightSchedules.Remove(flightSchedule);
+                errorMessage = null;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Đã xảy ra lỗi khi xóa chuyến bay: {ex.Message}";
+                return false;
+            }
+        }
+
+        public bool ThemKhachHang(int flightScheduleId, CreateKhachHangVM request, out string errorMessage)
+        {
+            try
+            {
+                var flightSchedule = _flightSchedules.FirstOrDefault(f => f.Id == flightScheduleId);
+                if (flightSchedule == null)
+                {
+                    errorMessage = "Không tìm thấy chuyến bay với ID này.";
+                    return false;
+                }
+
+                if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 100 ||
+                    string.IsNullOrWhiteSpace(request.Email) || !IsValidEmail(request.Email) ||
+                    string.IsNullOrWhiteSpace(request.Phone) || request.Phone.Length > 15 ||
+                    string.IsNullOrWhiteSpace(request.TicketNumber) || request.TicketNumber.Length > 20)
+                {
+                    errorMessage = "Dữ liệu đầu vào không hợp lệ. Vui lòng kiểm tra lại các trường thông tin.";
+                    return false;
+                }
+
+                var khachHang = new KhachHang
+                {
+                    Id = _khachHangs.Any() ? _khachHangs.Max(k => k.Id) + 1 : 1,
+                    Name = request.Name,
+                    Email = request.Email,
+                    Phone = request.Phone,
+                    TicketNumber = request.TicketNumber,
+                    FlightScheduleId = flightScheduleId,
+                    FlightSchedule = flightSchedule
+                };
+
+                flightSchedule.KhachHangs.Add(khachHang);
+                _khachHangs.Add(khachHang);
+
+                errorMessage = null;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Đã xảy ra lỗi khi thêm hành khách: {ex.Message}";
+                return false;
+            }
+        }
+
+        public List<KhachHangVM> LayDanhSachKhachHang(int flightScheduleId, out string errorMessage)
+        {
+            var flightSchedule = _flightSchedules.FirstOrDefault(f => f.Id == flightScheduleId);
+            if (flightSchedule != null && flightSchedule.KhachHangs.Any())
+            {
+                errorMessage = null;
+                return flightSchedule.KhachHangs.Select(k => new KhachHangVM
+                {
+                    Id = k.Id,
+                    Name = k.Name,
+                    Email = k.Email,
+                    Phone = k.Phone,
+                    TicketNumber = k.TicketNumber
+                }).ToList();
+            }
+
+            errorMessage = "Không tìm thấy hành khách nào trên chuyến bay này.";
+            return null;
+        }
+
+        public bool CapNhatKhachHang(int id, UpdateKhachHangVM request, out string errorMessage)
+        {
+            try
+            {
+                var khachHang = _khachHangs.FirstOrDefault(k => k.Id == id);
+                if (khachHang == null)
+                {
+                    errorMessage = "Không tìm thấy hành khách với ID này.";
+                    return false;
+                }
+
+                if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 100 ||
+                    string.IsNullOrWhiteSpace(request.Email) || !IsValidEmail(request.Email) ||
+                    string.IsNullOrWhiteSpace(request.Phone) || request.Phone.Length > 15 ||
+                    string.IsNullOrWhiteSpace(request.TicketNumber) || request.TicketNumber.Length > 20)
+                {
+                    errorMessage = "Dữ liệu đầu vào không hợp lệ. Vui lòng kiểm tra lại các trường thông tin.";
+                    return false;
+                }
+
+                khachHang.Name = request.Name;
+                khachHang.Email = request.Email;
+                khachHang.Phone = request.Phone;
+                khachHang.TicketNumber = request.TicketNumber;
+
+                errorMessage = null;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Đã xảy ra lỗi khi cập nhật thông tin hành khách: {ex.Message}";
+                return false;
+            }
+        }
+
+        public bool XoaKhachHang(int id, out string errorMessage)
+        {
+            try
+            {
+                var khachHang = _khachHangs.FirstOrDefault(k => k.Id == id);
+                if (khachHang == null)
+                {
+                    errorMessage = "Không tìm thấy hành khách với ID này.";
+                    return false;
+                }
+
+                _khachHangs.Remove(khachHang);
+                errorMessage = null;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Đã xảy ra lỗi khi xóa hành khách: {ex.Message}";
+                return false;
+            }
+        }
+
+        private bool IsValidEmail(string email)
+        {
+            try
+            {
+                var addr = new System.Net.Mail.MailAddress(email);
+                return addr.Address == email;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
+}
