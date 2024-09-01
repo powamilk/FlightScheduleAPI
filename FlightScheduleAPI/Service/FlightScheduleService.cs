@@ -1,5 +1,9 @@
 ﻿using FlightScheduleAPI.ViewModel;
 using FlightScheduleAPI.Entities;
+using FluentValidation;
+using FlightScheduleAPI.ViewModel.Validation;
+using FluentValidation.Results;
+
 
 namespace FlightScheduleAPI.Service
 {
@@ -8,10 +12,23 @@ namespace FlightScheduleAPI.Service
         private static List<FlightSchedule> _flightSchedules = new();
         private static List<KhachHang> _khachHangs = new List<KhachHang>();
         private readonly ILogger<FlightScheduleService> _logger;
+        private readonly IValidator<CreateFlightScheduleVM> _createValidator;
+        private readonly IValidator<UpdateFlightScheduleVM> _updateFlightValidator;
+        private readonly IValidator<CreateKhachHangVM> _createKhachHangValidator;
+        private readonly IValidator<UpdateKhachHangVM> _updateKhachHangValidator;
 
-        public FlightScheduleService(ILogger<FlightScheduleService> logger)
+        public FlightScheduleService(
+            ILogger<FlightScheduleService> logger,
+            IValidator<CreateFlightScheduleVM> createFlightValidator,
+            IValidator<UpdateFlightScheduleVM> updateFlightValidator,
+            IValidator<CreateKhachHangVM> createKhachHangValidator,
+            IValidator<UpdateKhachHangVM> updateKhachHangValidator)
         {
             _logger = logger;
+            _createValidator = createFlightValidator;
+            _updateFlightValidator = updateFlightValidator;
+            _createKhachHangValidator = createKhachHangValidator;
+            _updateKhachHangValidator = updateKhachHangValidator;
         }
 
         public List<FlightScheduleVM> LayDanhSachChuyenBay(out string errorMessage)
@@ -64,16 +81,12 @@ namespace FlightScheduleAPI.Service
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(request.FlightNumber) || request.FlightNumber.Length > 10 ||
-                    string.IsNullOrWhiteSpace(request.DepartureAirport) || request.DepartureAirport.Length > 100 ||
-                    string.IsNullOrWhiteSpace(request.ArrivalAirport) || request.ArrivalAirport.Length > 100 ||
-                    request.DepartureTime == default || request.ArrivalTime == default ||
-                    request.ArrivalTime <= request.DepartureTime ||
-                    !new[] { "đang bay", "đã hạ cánh", "hoãn" }.Contains(request.Status))
+                ValidationResult result = _createValidator.Validate(request);
+                if(!result.IsValid)
                 {
-                    errorMessage = "Dữ liệu đầu vào không hợp lệ. Vui lòng kiểm tra lại các trường thông tin.";
-                    return false;
-                }
+                    errorMessage = string.Join("," , result.Errors.Select(e => e.ErrorMessage));
+                    throw new Exception(errorMessage);
+                }    
 
                 var flightSchedule = new FlightSchedule
                 {
@@ -108,22 +121,18 @@ namespace FlightScheduleAPI.Service
                     return false;
                 }
 
-                if (string.IsNullOrWhiteSpace(request.FlightNumber) || request.FlightNumber.Length > 10 ||
-                    string.IsNullOrWhiteSpace(request.DepartureAirport) || request.DepartureAirport.Length > 100 ||
-                    string.IsNullOrWhiteSpace(request.ArrivalAirport) || request.ArrivalAirport.Length > 100 ||
-                    request.DepartureTime == default || request.ArrivalTime == default ||
-                    request.ArrivalTime <= request.DepartureTime ||
-                    !new[] { "đang bay", "đã hạ cánh", "hoãn" }.Contains(request.Status))
+                ValidationResult result = _updateFlightValidator.Validate(request);
+                if (!result.IsValid)
                 {
-                    errorMessage = "Dữ liệu đầu vào không hợp lệ. Vui lòng kiểm tra lại các trường thông tin.";
+                    errorMessage = string.Join(", ", result.Errors.Select(e => e.ErrorMessage));
                     return false;
                 }
 
                 flightSchedule.FlightNumber = request.FlightNumber;
                 flightSchedule.DepartureAirport = request.DepartureAirport;
                 flightSchedule.ArrivalAirport = request.ArrivalAirport;
-                flightSchedule.DepartureTime = request.DepartureTime;
-                flightSchedule.ArrivalTime = request.ArrivalTime;
+                flightSchedule.DepartureTime = request.StartTime;
+                flightSchedule.ArrivalTime = request.EndTime;
                 flightSchedule.Status = request.Status;
 
                 errorMessage = null;
@@ -169,12 +178,10 @@ namespace FlightScheduleAPI.Service
                     return false;
                 }
 
-                if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 100 ||
-                    string.IsNullOrWhiteSpace(request.Email) || !IsValidEmail(request.Email) ||
-                    string.IsNullOrWhiteSpace(request.Phone) || request.Phone.Length > 15 ||
-                    string.IsNullOrWhiteSpace(request.TicketNumber) || request.TicketNumber.Length > 20)
+                ValidationResult result = _createKhachHangValidator.Validate(request);
+                if (!result.IsValid)
                 {
-                    errorMessage = "Dữ liệu đầu vào không hợp lệ. Vui lòng kiểm tra lại các trường thông tin.";
+                    errorMessage = string.Join(", ", result.Errors.Select(e => e.ErrorMessage));
                     return false;
                 }
 
@@ -231,12 +238,10 @@ namespace FlightScheduleAPI.Service
                     return false;
                 }
 
-                if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 100 ||
-                    string.IsNullOrWhiteSpace(request.Email) || !IsValidEmail(request.Email) ||
-                    string.IsNullOrWhiteSpace(request.Phone) || request.Phone.Length > 15 ||
-                    string.IsNullOrWhiteSpace(request.TicketNumber) || request.TicketNumber.Length > 20)
+                ValidationResult result = _updateKhachHangValidator.Validate(request);
+                if (!result.IsValid)
                 {
-                    errorMessage = "Dữ liệu đầu vào không hợp lệ. Vui lòng kiểm tra lại các trường thông tin.";
+                    errorMessage = string.Join(", ", result.Errors.Select(e => e.ErrorMessage));
                     return false;
                 }
 

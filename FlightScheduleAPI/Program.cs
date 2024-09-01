@@ -1,9 +1,13 @@
 using FlightScheduleAPI.Service;
+using Microsoft.AspNetCore.Identity;
+using FluentValidation;
+using FlightScheduleAPI.ViewModel;
+using FlightScheduleAPI.ViewModel.Validation;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
+builder.Services.AddScoped<IValidator<CreateFlightScheduleVM>, CreateFlightValidation>();
 builder.Services.AddControllers();
 
 // ??ng ký FlightScheduleService v?i DI container
