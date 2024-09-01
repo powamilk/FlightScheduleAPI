@@ -1,4 +1,6 @@
-﻿namespace FlightScheduleAPI.ViewModel
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace FlightScheduleAPI.ViewModel
 {
     public class UpdateFlightScheduleVM
     {

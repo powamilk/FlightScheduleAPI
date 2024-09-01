@@ -19,13 +19,16 @@ namespace FlightScheduleAPI.Controllers
         public IActionResult CapNhatKhachHang(int id, [FromBody] UpdateKhachHangVM request)
         {
             var result = _flightScheduleService.CapNhatKhachHang(id, request, out string errorMessage);
-            if (result)
+            if(!result)
             {
-                var updatedKhachHang = _flightScheduleService.LayDanhSachKhachHang(id, out _).FirstOrDefault(k => k.Id == id);
-                return Ok(updatedKhachHang);
+                if(errorMessage == "Không tìm thấy hành khách với ID này.")
+                {
+                    return NotFound();
+                }
+                return BadRequest(errorMessage);
             }
-
-            return BadRequest(errorMessage);
+            var updateKhachHang = _flightScheduleService.LayDanhSachKhachHangTheoID(id, out _);
+            return Ok(updateKhachHang);
         }
 
         [HttpDelete("XoaKhachHang/{id}")]
@@ -37,5 +40,17 @@ namespace FlightScheduleAPI.Controllers
 
             return BadRequest(errorMessage);
         }
+
+        [HttpGet("LayDanhSachKhahHangTHeoChuyenBay")]
+        public IActionResult LayKhachHangTheoChuyenBay(int flightScheduleId)
+        {
+            var resule = _flightScheduleService.LayDanhSachKhachHangTheoChuyenBay(flightScheduleId, out string errorMessage);
+            if(resule == null)
+            {
+                return NotFound(errorMessage);
+            }
+            return Ok(resule);
+        }
+
     }
 }

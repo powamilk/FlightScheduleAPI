@@ -6,7 +6,7 @@ namespace FlightScheduleAPI.Service
     public class FlightScheduleService : IFlightScheduleService
     {
         private static List<FlightSchedule> _flightSchedules = new();
-        private static List<KhachHang> _khachHangs = new();
+        private static List<KhachHang> _khachHangs = new List<KhachHang>();
         private readonly ILogger<FlightScheduleService> _logger;
 
         public FlightScheduleService(ILogger<FlightScheduleService> logger)
@@ -18,9 +18,8 @@ namespace FlightScheduleAPI.Service
         {
             if (_flightSchedules.Any())
             {
-                errorMessage = null;
-                return _flightSchedules.Select(f => new FlightScheduleVM
-                {
+                var flightSchedulesVM = _flightSchedules.Select(f => new FlightScheduleVM 
+                { 
                     Id = f.Id,
                     FlightNumber = f.FlightNumber,
                     DepartureAirport = f.DepartureAirport,
@@ -28,17 +27,11 @@ namespace FlightScheduleAPI.Service
                     DepartureTime = f.DepartureTime,
                     ArrivalTime = f.ArrivalTime,
                     Status = f.Status,
-                    KhachHangs = f.KhachHangs.Select(k => new KhachHangVM
-                    {
-                        Id = k.Id,
-                        Name = k.Name,
-                        Email = k.Email,
-                        Phone = k.Phone,
-                        TicketNumber = k.TicketNumber
-                    }).ToList()
+                    KhachHangs = LayDanhSachKhachHangTheoChuyenBay(f.Id, out _)
                 }).ToList();
+                errorMessage = null;
+                return flightSchedulesVM;
             }
-
             errorMessage = "Không có chuyến bay nào trong danh sách.";
             return null;
         }
@@ -46,31 +39,25 @@ namespace FlightScheduleAPI.Service
         public FlightScheduleVM LayChuyenBayTheoId(int id, out string errorMessage)
         {
             var flightSchedule = _flightSchedules.FirstOrDefault(f => f.Id == id);
-            if (flightSchedule != null)
+            if (flightSchedule == null)
             {
-                errorMessage = null;
-                return new FlightScheduleVM
-                {
-                    Id = flightSchedule.Id,
-                    FlightNumber = flightSchedule.FlightNumber,
-                    DepartureAirport = flightSchedule.DepartureAirport,
-                    ArrivalAirport = flightSchedule.ArrivalAirport,
-                    DepartureTime = flightSchedule.DepartureTime,
-                    ArrivalTime = flightSchedule.ArrivalTime,
-                    Status = flightSchedule.Status,
-                    KhachHangs = flightSchedule.KhachHangs.Select(k => new KhachHangVM
-                    {
-                        Id = k.Id,
-                        Name = k.Name,
-                        Email = k.Email,
-                        Phone = k.Phone,
-                        TicketNumber = k.TicketNumber
-                    }).ToList()
-                };
+                errorMessage = "Không tìm thấy chuyến bay với ID này.";
+                return null;
             }
 
-            errorMessage = "Không tìm thấy chuyến bay với ID này.";
-            return null;
+            errorMessage = null;
+            return new FlightScheduleVM
+            {
+                Id = flightSchedule.Id,
+                FlightNumber = flightSchedule.FlightNumber,
+                DepartureAirport = flightSchedule.DepartureAirport,
+                ArrivalAirport = flightSchedule.ArrivalAirport,
+                DepartureTime = flightSchedule.DepartureTime,
+                ArrivalTime = flightSchedule.ArrivalTime,
+                Status = flightSchedule.Status,
+                KhachHangs = LayDanhSachKhachHangTheoChuyenBay(flightSchedule.Id, out _)
+            };
+
         }
 
         public bool TaoChuyenBay(CreateFlightScheduleVM request, out string errorMessage)
@@ -202,9 +189,7 @@ namespace FlightScheduleAPI.Service
                     FlightSchedule = flightSchedule
                 };
 
-                flightSchedule.KhachHangs.Add(khachHang);
                 _khachHangs.Add(khachHang);
-
                 errorMessage = null;
                 return true;
             }
@@ -303,6 +288,52 @@ namespace FlightScheduleAPI.Service
             {
                 return false;
             }
+        }
+
+        public List<KhachHangVM> LayDanhSachKhachHangTheoChuyenBay(int flightScheduleId, out string errorMessage)
+        {
+            var flightSchedule = _flightSchedules.FirstOrDefault(f => f.Id == flightScheduleId);
+            if(flightSchedule == null)
+            {
+                errorMessage = "Không tìm thấy chuyến bay với ID này";
+                return null;
+            }    
+            var khachHangs = _khachHangs.Where(k => k.FlightScheduleId == flightScheduleId).ToList();
+            if(!khachHangs.Any())
+            {
+                errorMessage = "Không có khách hàng nào trên chuyến bay này.";
+                return null;
+            }
+            var khachHangVMs = khachHangs.Select(k => new KhachHangVM
+            {
+                Id = k.Id,
+                Name = k.Name,
+                Email = k.Email,
+                Phone = k.Phone,
+                TicketNumber = k.TicketNumber,
+            }).ToList();
+            errorMessage = null;
+            return khachHangVMs;
+        }
+
+        public KhachHangVM LayDanhSachKhachHangTheoID(int id, out string errorMessage)
+        {
+            var khachHang =_khachHangs.FirstOrDefault(k => k.Id == id);
+            if (khachHang == null)
+            {
+                errorMessage = "Không tìm thấy hành khách với ID này.";
+                return null;
+            }
+            var khachHangVM = new KhachHangVM
+            {
+                Id = khachHang.Id,
+                Name = khachHang.Name,
+                Email = khachHang.Email,
+                Phone = khachHang.Phone,
+                TicketNumber = khachHang.TicketNumber,
+            };
+            errorMessage = null;
+            return khachHangVM;
         }
     }
 }

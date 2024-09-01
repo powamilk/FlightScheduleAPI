@@ -13,5 +13,8 @@ namespace FlightScheduleAPI.Service
         List<KhachHangVM> LayDanhSachKhachHang(int flightScheduleId, out string errorMessage);
         bool CapNhatKhachHang(int id, UpdateKhachHangVM request, out string errorMessage);
         bool XoaKhachHang(int id, out string errorMessage);
+        List<KhachHangVM> LayDanhSachKhachHangTheoChuyenBay(int flightScheduleId, out string errorMessage);
+        KhachHangVM LayDanhSachKhachHangTheoID(int id, out string errorMessage);
+
     }
 }

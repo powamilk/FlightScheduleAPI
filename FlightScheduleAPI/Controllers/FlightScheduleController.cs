@@ -1,4 +1,5 @@
-﻿using FlightScheduleAPI.Service;
+﻿using FlightScheduleAPI.Entities;
+using FlightScheduleAPI.Service;
 using FlightScheduleAPI.ViewModel;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,6 +10,7 @@ namespace FlightScheduleAPI.Controllers
     public class FlightScheduleController : ControllerBase
     {
         private readonly IFlightScheduleService _flightScheduleService;
+        private static List<KhachHang> _khachHangs = new List<KhachHang>();
 
         public FlightScheduleController(IFlightScheduleService flightScheduleService)
         {
@@ -39,13 +41,12 @@ namespace FlightScheduleAPI.Controllers
         public IActionResult TaoChuyenBay([FromBody] CreateFlightScheduleVM request)
         {
             var result = _flightScheduleService.TaoChuyenBay(request, out string errorMessage);
-            if (result)
+            if (!result)
             {
-                var createdFlight = _flightScheduleService.LayChuyenBayTheoId(_flightScheduleService.LayDanhSachChuyenBay(out _).Max(f => f.Id), out _);
-                return CreatedAtAction(nameof(LayChuyenBayTheoId), new { id = createdFlight.Id }, createdFlight);
+                return BadRequest(errorMessage);
             }
-
-            return BadRequest(errorMessage);
+            var createFlight = _flightScheduleService.LayChuyenBayTheoId(_flightScheduleService.LayDanhSachChuyenBay(out _).Max(f => f.Id), out _);
+            return CreatedAtAction(nameof(LayChuyenBayTheoId), new { id = createFlight.Id }, createFlight);
         }
 
         [HttpPut("CapNhatChuyenBay/{id}")]
@@ -87,11 +88,13 @@ namespace FlightScheduleAPI.Controllers
         [HttpGet("LayDanhSachKhachHangTheoChuyenBayId/{flightScheduleId}")]
         public IActionResult LayDanhSachKhachHangTheoChuyenBayId(int flightScheduleId)
         {
-            var result = _flightScheduleService.LayDanhSachKhachHang(flightScheduleId, out string errorMessage);
-            if (result != null)
-                return Ok(result);
-
-            return NotFound(errorMessage);
+           
+            var result = _flightScheduleService.LayDanhSachKhachHangTheoChuyenBay(flightScheduleId, out string errorMessage);
+            if (result == null)
+            {
+                return NotFound(errorMessage);
+            }    
+            return Ok(result);
         }
     }
 }
