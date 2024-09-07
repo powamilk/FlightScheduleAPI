@@ -4,6 +4,7 @@ namespace FlightScheduleAPI.ViewModel
 {
     public class UpdateKhachHangVM
     {
+        public int Id { get; set; }
         [Required(ErrorMessage = "Tên khách hàng không được bỏ trống")]
         [StringLength(100, ErrorMessage = "Tên khách hàng không được quá 100 ký tự")]
         public string Name { get; set; }
